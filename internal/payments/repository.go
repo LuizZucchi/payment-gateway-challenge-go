@@ -1,7 +1,7 @@
-package repository
+package payments
 
 import (
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/models"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/models"
 )
 
 type PaymentsRepository struct {

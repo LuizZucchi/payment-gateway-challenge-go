@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/cko-recruitment/payment-gateway-challenge-go/docs"
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/handlers"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/docs"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/handlers"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
