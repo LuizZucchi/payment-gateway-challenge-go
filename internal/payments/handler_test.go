@@ -15,7 +15,7 @@ func TestGetPaymentHandler(t *testing.T) {
 	payment := payments.PostPaymentResponse{
 		Id:                 "test-id",
 		PaymentStatus:      "test-successful-status",
-		CardNumberLastFour: 1234,
+		CardNumberLastFour: "1234",
 		ExpiryMonth:        10,
 		ExpiryYear:         2035,
 		Currency:           "GBP",

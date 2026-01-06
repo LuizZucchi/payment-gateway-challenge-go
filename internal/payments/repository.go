@@ -1,6 +1,5 @@
 package payments
 
-
 type PaymentsRepository struct {
 	payments []PostPaymentResponse
 }

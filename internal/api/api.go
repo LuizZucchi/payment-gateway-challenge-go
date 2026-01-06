@@ -21,7 +21,6 @@ func New() *Api {
 	a := &Api{}
 	a.paymentsRepo = payments.NewPaymentsRepository()
 	a.setupRouter()
-
 	return a
 }
 
