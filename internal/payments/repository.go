@@ -1,20 +1,17 @@
 package payments
 
-import (
-	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/models"
-)
 
 type PaymentsRepository struct {
-	payments []models.PostPaymentResponse
+	payments []PostPaymentResponse
 }
 
 func NewPaymentsRepository() *PaymentsRepository {
 	return &PaymentsRepository{
-		payments: []models.PostPaymentResponse{},
+		payments: []PostPaymentResponse{},
 	}
 }
 
-func (ps *PaymentsRepository) GetPayment(id string) *models.PostPaymentResponse {
+func (ps *PaymentsRepository) GetPayment(id string) *PostPaymentResponse {
 	for _, element := range ps.payments {
 		if element.Id == id {
 			return &element
@@ -23,6 +20,6 @@ func (ps *PaymentsRepository) GetPayment(id string) *models.PostPaymentResponse 
 	return nil
 }
 
-func (ps *PaymentsRepository) AddPayment(payment models.PostPaymentResponse) {
+func (ps *PaymentsRepository) AddPayment(payment PostPaymentResponse) {
 	ps.payments = append(ps.payments, payment)
 }

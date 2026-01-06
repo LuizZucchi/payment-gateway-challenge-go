@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/LuizZucchi/payment-gateway-challenge-go/docs"
-	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/handlers"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
@@ -34,7 +34,7 @@ func (a *Api) SwaggerHandler() http.HandlerFunc {
 
 // GetPaymentHandler returns an http.HandlerFunc that handles Payments GET requests.
 func (a *Api) GetPaymentHandler() http.HandlerFunc {
-	h := handlers.NewPaymentsHandler(a.paymentsRepo)
+	h := payments.NewPaymentsHandler(a.paymentsRepo)
 
 	return h.GetHandler()
 }

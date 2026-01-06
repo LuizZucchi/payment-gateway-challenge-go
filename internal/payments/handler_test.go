@@ -5,14 +5,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/models"
-	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/repository"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetPaymentHandler(t *testing.T) {
-	payment := models.PostPaymentResponse{
+	payment := payments.PostPaymentResponse{
 		Id:                 "test-id",
 		PaymentStatus:      "test-successful-status",
 		CardNumberLastFour: 1234,
@@ -21,10 +21,10 @@ func TestGetPaymentHandler(t *testing.T) {
 		Currency:           "GBP",
 		Amount:             100,
 	}
-	ps := repository.NewPaymentsRepository()
+	ps := payments.NewPaymentsRepository()
 	ps.AddPayment(payment)
 
-	payments := NewPaymentsHandler(ps)
+	payments := payments.NewPaymentsHandler(ps)
 
 	r := chi.NewRouter()
 	r.Get("/api/payments/{id}", payments.GetHandler())

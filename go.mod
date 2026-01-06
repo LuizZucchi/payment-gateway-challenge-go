@@ -1,4 +1,4 @@
-module github.com/cko-recruitment/payment-gateway-challenge-go
+module github.com/LuizZucchi/payment-gateway-challenge-go
 
 go 1.21
 

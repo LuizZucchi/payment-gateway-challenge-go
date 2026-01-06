@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/repository"
 	"github.com/go-chi/chi/v5"
 )
 
 type PaymentsHandler struct {
-	storage *repository.PaymentsRepository
+	storage *PaymentsRepository
 }
 
-func NewPaymentsHandler(storage *repository.PaymentsRepository) *PaymentsHandler {
+func NewPaymentsHandler(storage *PaymentsRepository) *PaymentsHandler {
 	return &PaymentsHandler{
 		storage: storage,
 	}
