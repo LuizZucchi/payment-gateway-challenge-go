@@ -1,4 +1,4 @@
-package models
+package payments
 
 type PostPaymentRequest struct {
 	CardNumberLastFour int    `json:"card_number_last_four"`

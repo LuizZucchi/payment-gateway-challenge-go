@@ -1,10 +1,10 @@
-package handlers
+package payments
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/repository"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/repository"
 	"github.com/go-chi/chi/v5"
 )
 

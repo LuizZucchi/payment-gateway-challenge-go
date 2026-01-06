@@ -1,12 +1,12 @@
-package handlers
+package payments_test
 
 import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/models"
-	"github.com/cko-recruitment/payment-gateway-challenge-go/internal/repository"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/models"
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments/repository"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 )
