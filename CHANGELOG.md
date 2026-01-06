@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-06
+
+### Added
+- **Validation Logic:** Created `validator.go` in the `payments` package to handle business rules validation (Currency, Amount, Card Number, CVV, Expiry Date).
+- **Unit Tests:** Added black-box testing for the validator in `validator_test.go` covering all rejection scenarios.
+
+### Changed
+- **Data Model:** Updated `CardNumber` field in `PostPaymentRequest` to `string` type to support full PAN length validation and handling.
+- **Handlers:** Implemented validation logic within the `PostHandler`. Invalid requests now return `400 Bad Request`.
+- **Tests:** Updated handler tests to mock/simulate validation scenarios and accommodate the new data types.
+
 ## [0.2.0] - 2026-01-06
 **Focus:** Data Modeling, Security & API Contracts.
 

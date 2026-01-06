@@ -38,6 +38,29 @@ func (h *PaymentsHandler) GetHandler() http.HandlerFunc {
 }
 
 func (ph *PaymentsHandler) PostHandler() http.HandlerFunc {
-	//TODO
-	return nil
+	return func(w http.ResponseWriter, r *http.Request) {
+		var req PostPaymentRequest
+
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error_message": "Invalid request body format",
+				"payment_status": "Rejected",
+			})
+			return
+		}
+
+		if err := req.Validate(); err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusBadRequest)
+			json.NewEncoder(w).Encode(map[string]string{
+				"error_message":  err.Error(),
+				"payment_status": "Rejected",
+			})
+			return
+		}
+
+		w.WriteHeader(http.StatusNotImplemented)
+	}
 }
