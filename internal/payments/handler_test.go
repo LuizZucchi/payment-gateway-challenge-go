@@ -11,6 +11,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+type MockBankGateway struct{}
+
+func (m *MockBankGateway) ProcessPayment(req *payments.PostPaymentRequest) (*payments.BankAuthorization, error) {
+	return &payments.BankAuthorization{}, nil
+}
+
 func TestGetPaymentHandler(t *testing.T) {
 	payment := payments.PostPaymentResponse{
 		Id:                 "test-id",
@@ -24,10 +30,10 @@ func TestGetPaymentHandler(t *testing.T) {
 	ps := payments.NewPaymentsRepository()
 	ps.AddPayment(payment)
 
-	payments := payments.NewPaymentsHandler(ps)
+	handler := payments.NewPaymentsHandler(ps, &MockBankGateway{})
 
 	r := chi.NewRouter()
-	r.Get("/api/payments/{id}", payments.GetHandler())
+	r.Get("/api/payments/{id}", handler.GetHandler())
 
 	httpServer := &http.Server{
 		Addr:    ":8091",

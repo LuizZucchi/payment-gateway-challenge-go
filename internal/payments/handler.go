@@ -5,15 +5,31 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 )
 
-type PaymentsHandler struct {
-	storage *PaymentsRepository
+// BankAuthorization define o que o Gateway espera receber do Banco.
+// Definimos aqui para não depender do pacote 'bank'.
+type BankAuthorization struct {
+	Authorized        bool
+	AuthorizationCode string
+	ErrorMessage      string
 }
 
-func NewPaymentsHandler(storage *PaymentsRepository) *PaymentsHandler {
+// BankGateway define o contrato que qualquer cliente bancário deve seguir.
+type BankGateway interface {
+	ProcessPayment(req *PostPaymentRequest) (*BankAuthorization, error)
+}
+
+type PaymentsHandler struct {
+	storage    *PaymentsRepository
+	bankClient BankGateway
+}
+
+func NewPaymentsHandler(storage *PaymentsRepository, bankClient BankGateway) *PaymentsHandler {
 	return &PaymentsHandler{
-		storage: storage,
+		storage:    storage,
+		bankClient: bankClient,
 	}
 }
 
@@ -37,7 +53,7 @@ func (h *PaymentsHandler) GetHandler() http.HandlerFunc {
 	}
 }
 
-func (ph *PaymentsHandler) PostHandler() http.HandlerFunc {
+func (h *PaymentsHandler) PostHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req PostPaymentRequest
 
@@ -60,7 +76,43 @@ func (ph *PaymentsHandler) PostHandler() http.HandlerFunc {
 			})
 			return
 		}
+		bankResponse, err := h.bankClient.ProcessPayment(&req)
+		if err != nil {
+			h.respondWithError(w, http.StatusBadGateway, "Financial institution unavailable", "Failed")
+			return
+		}
 
-		w.WriteHeader(http.StatusNotImplemented)
+		status := "Declined"
+		if bankResponse.Authorized {
+			status = "Authorized"
+		}
+
+		paymentID := uuid.New().String()
+		lastFour := req.CardNumber[len(req.CardNumber)-4:]
+
+		response := PostPaymentResponse{
+			Id:                 paymentID,
+			PaymentStatus:      status,
+			CardNumberLastFour: lastFour,
+			ExpiryMonth:        req.ExpiryMonth,
+			ExpiryYear:         req.ExpiryYear,
+			Currency:           req.Currency,
+			Amount:             req.Amount,
+		}
+
+		h.storage.AddPayment(response)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(response)
 	}
+}
+
+func (h *PaymentsHandler) respondWithError(w http.ResponseWriter, code int, msg string, status string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{
+		"error_message":  msg,
+		"payment_status": status,
+	})
 }
