@@ -45,7 +45,7 @@ func (ph *PaymentsHandler) PostHandler() http.HandlerFunc {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
 			json.NewEncoder(w).Encode(map[string]string{
-				"error_message": "Invalid request body format",
+				"error_message":  "Invalid request body format",
 				"payment_status": "Rejected",
 			})
 			return
