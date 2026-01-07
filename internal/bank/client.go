@@ -64,7 +64,7 @@ func (c *BankClient) ProcessPayment(req *payments.PostPaymentRequest) (*payments
 		if err := json.NewDecoder(resp.Body).Decode(&bankResp); err != nil {
 			return nil, fmt.Errorf("failed to decode bank response: %w", err)
 		}
-		
+
 		return &payments.BankAuthorization{
 			Authorized:        bankResp.Authorized,
 			AuthorizationCode: bankResp.AuthorizationCode,
