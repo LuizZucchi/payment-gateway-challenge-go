@@ -31,12 +31,12 @@ func NewBankClient(baseURL string) *BankClient {
 	}
 }
 
-func (bc *BankClient) ProcessPayment(req *payments.PostPaymentRequest) (*BankPaymentResponse, error) {
+func (c *BankClient) ProcessPayment(req *payments.PostPaymentRequest) (*payments.BankAuthorization, error) {
 	bankReq := BankPaymentRequest{
-		Amount:     req.Amount,
-		Currency:   req.Currency,
 		CardNumber: req.CardNumber,
-		ExpiryDate: bc.formatExpiryDate(req.ExpiryMonth, req.ExpiryYear),
+		ExpiryDate: c.formatExpiryDate(req.ExpiryMonth, req.ExpiryYear),
+		Currency:   req.Currency,
+		Amount:     req.Amount,
 		Cvv:        req.Cvv,
 	}
 
@@ -45,25 +45,32 @@ func (bc *BankClient) ProcessPayment(req *payments.PostPaymentRequest) (*BankPay
 		return nil, fmt.Errorf("failed to marshal bank request: %w", err)
 	}
 
-	url := fmt.Sprintf("%s/payments", bc.baseURL)
+	url := fmt.Sprintf("%s/payments", c.baseURL)
 	httpReq, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBody))
 	if err != nil {
-		return nil, fmt.Errorf("failed to create bank request: %w", err)
+		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := bc.httpClient.Do(httpReq)
+	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
 		return nil, ErrBankUnavailable
 	}
 	defer resp.Body.Close()
+
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var bankResp BankPaymentResponse
 		if err := json.NewDecoder(resp.Body).Decode(&bankResp); err != nil {
 			return nil, fmt.Errorf("failed to decode bank response: %w", err)
 		}
-		return &bankResp, nil
+
+		return &payments.BankAuthorization{
+			Authorized:        bankResp.Authorized,
+			AuthorizationCode: bankResp.AuthorizationCode,
+			ErrorMessage:      bankResp.ErrorMessage,
+		}, nil
+
 	case http.StatusBadRequest:
 		var errorResp map[string]interface{}
 		_ = json.NewDecoder(resp.Body).Decode(&errorResp)
@@ -78,5 +85,5 @@ func (bc *BankClient) ProcessPayment(req *payments.PostPaymentRequest) (*BankPay
 }
 
 func (c *BankClient) formatExpiryDate(month, year int) string {
-	return fmt.Sprintf("%02d/%d", month, year) // MM/YYYY format
+	return fmt.Sprintf("%02d/%d", month, year)
 }

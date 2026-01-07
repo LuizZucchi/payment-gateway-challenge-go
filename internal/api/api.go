@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 
+	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/bank"
 	"github.com/LuizZucchi/payment-gateway-challenge-go/internal/payments"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -15,11 +17,19 @@ import (
 type Api struct {
 	router       *chi.Mux
 	paymentsRepo *payments.PaymentsRepository
+	bankClient   *bank.BankClient
 }
 
 func New() *Api {
 	a := &Api{}
 	a.paymentsRepo = payments.NewPaymentsRepository()
+
+	bankURL := os.Getenv("BANK_URL")
+	if bankURL == "" {
+		bankURL = "http://localhost:8080"
+	}
+	a.bankClient = bank.NewBankClient(bankURL)
+
 	a.setupRouter()
 	return a
 }
@@ -60,4 +70,5 @@ func (a *Api) setupRouter() {
 	a.router.Get("/swagger/*", a.SwaggerHandler())
 
 	a.router.Get("/api/payments/{id}", a.GetPaymentHandler())
+	a.router.Post("/api/payments", a.PostPaymentHandler())
 }
