@@ -59,7 +59,7 @@ func (req *PostPaymentRequest) validateCardNumber() error {
 	if !numericRegex.MatchString(cleanCard) {
 		return errors.New("card_number must contain only numeric characters")
 	}
-	
+
 	if len(cleanCard) < 14 || len(cleanCard) > 19 {
 		return errors.New("card_number must be between 14 and 19 characters")
 	}

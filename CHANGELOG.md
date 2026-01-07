@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-07
+**Focus:** Acquiring Bank Integration.
+
+### Added
+- **Bank Client:** Implemented HTTP client in `internal/bank` to communicate with the Simulator.
+- **DTO Mapping:** Added logic to transform domain models into bank-specific formats (e.g., merging `Month/Year` integers into `MM/YYYY` string).
+
+### Decisions
+- **Dependency Injection:** The Bank Client is injected into the Payments Handler, allowing for easy mocking during unit tests without needing the actual simulator running.
+
 ## [0.3.0] - 2026-01-06
 
 ### Added
