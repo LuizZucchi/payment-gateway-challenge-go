@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2026-01-07
+**Focus:** Core Payment Flow, Testing & Documentation.
+
+### Added
+- **Payment Flow Logic:** Fully implemented `PostHandler` to orchestrate validation, bank communication, and persistence.
+- **Integration Tests:** Added comprehensive integration tests using mocks to verify the full flow (Success, Decline, Bank Error).
+- **Wiring:** Updated dependency injection in `api` package to connect the Bank Client with the Payments Handler.
+
+### Changed
+- **API Response:** The `POST /payments` endpoint now returns real status from the bank (`Authorized` or `Declined`) instead of stubbed responses.
+- **Documentation:** Updated `README.md` with architectural decisions, testing guide, and execution instructions.
+
 ## [0.4.0] - 2026-01-07
 **Focus:** Acquiring Bank Integration.
 
