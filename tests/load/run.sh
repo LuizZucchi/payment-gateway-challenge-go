@@ -5,52 +5,50 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 # ==============================================================================
-# Configuração de Diretórios e Variáveis
+# Dirs and var configs
 # ==============================================================================
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
 K6_DIR="$SCRIPT_DIR/k6"
 
-# Nomes dos Containers e Redes
 NETWORK_NAME="payment-gateway-challenge-go_default"
 API_CONTAINER_NAME="api_load_test"
 BANK_CONTAINER_NAME="bank_simulator"
 IMAGE_NAME="payment-api:loadtest"
 
-# Validações
 if [ ! -f "$K6_DIR/script.js" ]; then
-    echo -e "${RED}ERRO: script.js não encontrado em $K6_DIR${NC}"
+    echo -e "${RED}ERROR: script.js not found in $K6_DIR${NC}"
     exit 1
 fi
 
 if [ ! -f "$PROJECT_ROOT/Dockerfile" ]; then
-    echo -e "${RED}ERRO: Dockerfile não encontrado na raiz: $PROJECT_ROOT/Dockerfile${NC}"
+    echo -e "${RED}ERROR: Dockerfile not found at root: $PROJECT_ROOT/Dockerfile${NC}"
     exit 1
 fi
 
 # ==============================================================================
-# 1. Preparar Ambiente
+# 1. Env prep
 # ==============================================================================
-echo -e "\n[1/5] Limpando ambiente anterior..."
+echo -e "\n[1/5] Cleaning up previous environment..."
 docker rm -f $API_CONTAINER_NAME 2>/dev/null || true
 docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down 2>/dev/null || true
 
-echo -e "\n[2/5] Buildando imagem da API..."
+echo -e "\n[2/5] Building API image..."
 
 docker build --network=host -t $IMAGE_NAME -f "$PROJECT_ROOT/Dockerfile" "$PROJECT_ROOT"
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Falha no build da imagem Docker!${NC}"
+    echo -e "${RED}Docker image build failed!${NC}"
     exit 1
 fi
 
 # ==============================================================================
-# 2. Iniciar Infraestrutura
+# 2. Start infra
 # ==============================================================================
-echo -e "\n[3/5] Iniciando Dependências..."
+echo -e "\n[3/5] Starting dependencies..."
 docker-compose -f "$PROJECT_ROOT/docker-compose.yml" up -d
 
-echo "Aguardando Bank Simulator..."
+echo "Waiting for Bank Simulator..."
 for i in {1..30}; do
     if docker run --rm --network $NETWORK_NAME curlimages/curl -s "http://$BANK_CONTAINER_NAME:8080" > /dev/null; then
         echo -e "${GREEN}Bank Simulator online!${NC}"
@@ -60,9 +58,9 @@ for i in {1..30}; do
 done
 
 # ==============================================================================
-# 3. Iniciar API Containerizada
+# 3. Start API
 # ==============================================================================
-echo -e "\n[4/5] Iniciando API no Container..."
+echo -e "\n[4/5] Starting API in Container..."
 
 docker run -d \
   --name $API_CONTAINER_NAME \
@@ -70,11 +68,11 @@ docker run -d \
   -e BANK_URL="http://$BANK_CONTAINER_NAME:8080" \
   $IMAGE_NAME
 
-echo "Aguardando API..."
+echo "Waiting for API..."
 API_READY=false
 for i in {1..30}; do
     if ! docker ps | grep -q $API_CONTAINER_NAME; then
-        echo -e "${RED}API Container morreu! Logs:${NC}"
+        echo -e "${RED}API Container died! Logs:${NC}"
         docker logs $API_CONTAINER_NAME
         break
     fi
@@ -88,15 +86,15 @@ for i in {1..30}; do
 done
 
 if [ "$API_READY" = false ]; then
-    echo -e "${RED}Falha ao iniciar API.${NC}"
+    echo -e "${RED}Failed to start API.${NC}"
     docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down
     exit 1
 fi
 
 # ==============================================================================
-# 4. Executar K6 (Sidecar Mode)
+# 4. Execute K6 Load Test as sidecar
 # ==============================================================================
-echo -e "\n[5/5] Executando K6 Load Test..."
+echo -e "\n[5/5] Running K6 Load Test..."
 
 docker run --rm -i \
   --network="container:$API_CONTAINER_NAME" \
@@ -106,11 +104,11 @@ docker run --rm -i \
 EXIT_CODE=$?
 
 # ==============================================================================
-# 5. Limpeza Final
+# 5. Cleanup
 # ==============================================================================
-echo -e "\nLimpando tudo..."
+echo -e "\nCleaning up..."
 if [ $EXIT_CODE -ne 0 ]; then
-    echo -e "${RED}Logs da API:${NC}"
+    echo -e "${RED}API Logs:${NC}"
     docker logs $API_CONTAINER_NAME | tail -n 20
 fi
 
@@ -119,9 +117,9 @@ docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down > /dev/null
 docker rmi $IMAGE_NAME > /dev/null 2>/dev/null || true
 
 if [ $EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}Teste de Carga Finalizado com SUCESSO!${NC}"
+    echo -e "${GREEN}Load Test Finished SUCCESSFULLY!${NC}"
 else
-    echo -e "${RED}Teste de Carga FALHOU!${NC}"
+    echo -e "${RED}Load Test FAILED!${NC}"
 fi
 
 exit $EXIT_CODE

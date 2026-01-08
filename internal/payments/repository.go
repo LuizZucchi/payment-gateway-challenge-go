@@ -45,7 +45,7 @@ func (ps *PaymentsRepository) monitor() {
 
 func (ps *PaymentsRepository) GetPayment(id string) *PostPaymentResponse {
 	respChan := make(chan *PostPaymentResponse)
-	
+
 	ps.getChan <- getPaymentRequest{
 		id:       id,
 		respChan: respChan,

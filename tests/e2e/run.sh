@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Configurações e Variáveis
+# Configuration and Variables
 # ==============================================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -12,32 +12,32 @@ BANK_URL="http://localhost:8080"
 PROJECT_ROOT="../../" 
 
 # ==============================================================================
-# Verificação de Pré-requisitos
+# Prerequisites Check
 # ==============================================================================
 if ! command -v jq &> /dev/null; then
-    echo -e "${RED}Erro: 'jq' não está instalado.${NC}"
+    echo -e "${RED}Error: 'jq' is not installed.${NC}"
     exit 1
 fi
 
 # ==============================================================================
-# Inicialização do Ambiente (Docker Compose)
+# Environment Initialization (Docker Compose)
 # ==============================================================================
-echo -e "\n[1/5] Iniciando Ambiente (API + Bank Simulator)..."
+echo -e "\n[1/5] Starting Environment (API + Bank Simulator)..."
 pushd $PROJECT_ROOT > /dev/null
 
 docker-compose up -d --build
 
 if [ $? -ne 0 ]; then
-    echo -e "${RED}Falha ao subir containers via docker-compose.${NC}"
+    echo -e "${RED}Failed to start containers via docker-compose.${NC}"
     popd > /dev/null
     exit 1
 fi
 popd > /dev/null
 
 # ==============================================================================
-# Healthcheck (Aguardando Serviços)
+# Healthcheck (Waiting for Services)
 # ==============================================================================
-echo "Aguardando Bank Simulator ($BANK_URL)..."
+echo "Waiting for Bank Simulator ($BANK_URL)..."
 for i in {1..30}; do
     if curl -s $BANK_URL > /dev/null; then
         echo -e "${GREEN}Bank Simulator online!${NC}"
@@ -46,7 +46,7 @@ for i in {1..30}; do
     sleep 1
 done
 
-echo "Aguardando API ($API_URL)..."
+echo "Waiting for API ($API_URL)..."
 API_READY=false
 for i in {1..30}; do
     if curl -s "$API_URL/ping" > /dev/null; then
@@ -58,8 +58,8 @@ for i in {1..30}; do
 done
 
 if [ "$API_READY" = false ]; then
-    echo -e "${RED}API falhou ao iniciar ou não está respondendo.${NC}"
-    echo -e "${RED}Logs dos containers:${NC}"
+    echo -e "${RED}API failed to start or is not responding.${NC}"
+    echo -e "${RED}Container logs:${NC}"
     pushd $PROJECT_ROOT > /dev/null
     docker-compose logs --tail=20
     docker-compose down
@@ -68,7 +68,7 @@ if [ "$API_READY" = false ]; then
 fi
 
 # ==============================================================================
-# Função Auxiliar de Teste
+# Helper Test Function
 # ==============================================================================
 run_test() {
     local test_name=$1
@@ -77,13 +77,13 @@ run_test() {
     local check_field=$4
     local check_value=$5
 
-    echo -n "Testando: $test_name ... " >&2
+    echo -n "Testing: $test_name ... " >&2
 
     TMP_BODY=$(mktemp)
     HTTP_CODE=$(eval "$curl_cmd -o $TMP_BODY -w '%{http_code}'")
 
     if [ "$HTTP_CODE" -ne "$expected_status" ]; then
-        echo -e "${RED}FALHOU (Status: $HTTP_CODE, Esperado: $expected_status)${NC}" >&2
+        echo -e "${RED}FAILED (Status: $HTTP_CODE, Expected: $expected_status)${NC}" >&2
         echo "Response Body:" >&2
         cat $TMP_BODY >&2
         echo "" >&2
@@ -94,13 +94,13 @@ run_test() {
     if [ ! -z "$check_field" ]; then
         actual_value=$(cat $TMP_BODY | jq -r "$check_field")
         if [[ "$actual_value" != "$check_value" ]]; then
-            echo -e "${RED}FALHOU (Campo '$check_field' valor: '$actual_value', Esperado: '$check_value')${NC}" >&2
+            echo -e "${RED}FAILED (Field '$check_field' value: '$actual_value', Expected: '$check_value')${NC}" >&2
             rm "$TMP_BODY"
             return 1
         fi
     fi
 
-    echo -e "${GREEN}SUCESSO${NC}" >&2
+    echo -e "${GREEN}SUCCESS${NC}" >&2
     
     cat $TMP_BODY | jq -r '.id // empty'
     
@@ -108,46 +108,46 @@ run_test() {
 }
 
 # ==============================================================================
-# Execução dos Cenários
+# Scenario Execution
 # ==============================================================================
-echo -e "\n[3/5] Executando Cenários..."
+echo -e "\n[3/5] Running Scenarios..."
 
-# Cenário 1: Sucesso (Cartão final ímpar)
-PAYMENT_ID=$(run_test "Pagamento Autorizado" \
+# Scenario 1: Success (Card ending in odd number)
+PAYMENT_ID=$(run_test "Authorized Payment" \
     "curl -s -X POST $API_URL/api/payments -H 'Content-Type: application/json' -d '{\"card_number\": \"1234567890123451\", \"expiry_month\": 12, \"expiry_year\": 2030, \"currency\": \"USD\", \"amount\": 1000, \"cvv\": \"123\"}'" \
     200 ".payment_status" "Authorized")
 
-# Cenário 2: GET
+# Scenario 2: GET
 if [ ! -z "$PAYMENT_ID" ] && [ "$PAYMENT_ID" != "null" ]; then
-    run_test "Recuperar Pagamento (GET)" \
+    run_test "Retrieve Payment (GET)" \
         "curl -s -X GET $API_URL/api/payments/$PAYMENT_ID" \
         200 ".payment_status" "Authorized" > /dev/null
 else
     echo -e "${RED}Skipping GET test (No ID captured)${NC}" >&2
 fi
 
-# Cenário 3: Recusa (Cartão final par)
-run_test "Pagamento Recusado" \
+# Scenario 3: Decline (Card ending in even number)
+run_test "Declined Payment" \
     "curl -s -X POST $API_URL/api/payments -H 'Content-Type: application/json' -d '{\"card_number\": \"1234567890123452\", \"expiry_month\": 12, \"expiry_year\": 2030, \"currency\": \"EUR\", \"amount\": 500, \"cvv\": \"123\"}'" \
     200 ".payment_status" "Declined" > /dev/null
 
-# Cenário 4: Validação (Moeda Inválida)
-# ATENÇÃO: Mudado de BRL para JPY
-run_test "Erro de Validação" \
+# Scenario 4: Validation (Invalid Currency)
+# NOTE: Changed from BRL to JPY
+run_test "Validation Error" \
     "curl -s -X POST $API_URL/api/payments -H 'Content-Type: application/json' -d '{\"card_number\": \"1234567890123451\", \"expiry_month\": 12, \"expiry_year\": 2030, \"currency\": \"JPY\", \"amount\": 1000, \"cvv\": \"123\"}'" \
     400 ".payment_status" "Rejected" > /dev/null
 
-# Cenário 5: Erro do Banco (Cartão final 0)
-run_test "Banco Indisponível" \
+# Scenario 5: Bank Error (Card ending in 0)
+run_test "Bank Unavailable" \
     "curl -s -X POST $API_URL/api/payments -H 'Content-Type: application/json' -d '{\"card_number\": \"1234567890123450\", \"expiry_month\": 12, \"expiry_year\": 2030, \"currency\": \"USD\", \"amount\": 1000, \"cvv\": \"123\"}'" \
     502 ".payment_status" "Failed" > /dev/null
 
 # ==============================================================================
-# Limpeza e Encerramento
+# Cleanup and Shutdown
 # ==============================================================================
-echo -e "\n[4/5] Limpando ambiente..."
+echo -e "\n[4/5] Cleaning up environment..."
 pushd $PROJECT_ROOT > /dev/null
 docker-compose down
 popd > /dev/null
 
-echo -e "\n[5/5] Finalizado."
+echo -e "\n[5/5] Finished."
