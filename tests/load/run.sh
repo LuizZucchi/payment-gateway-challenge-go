@@ -1,54 +1,85 @@
 #!/bin/bash
 
-# ==============================================================================
-# Configurações
-# ==============================================================================
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-API_URL="http://localhost:8090"
-BANK_URL="http://localhost:8080"
-PID_FILE="api_load.pid"
-API_LOG="api_output.log" # Arquivo de log para debug
-PROJECT_ROOT="../../" 
+# ==============================================================================
+# Configuração de Diretórios e Variáveis
+# ==============================================================================
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+K6_DIR="$SCRIPT_DIR/k6"
+
+# Nomes dos Containers e Redes
+NETWORK_NAME="payment-gateway-challenge-go_default"
+API_CONTAINER_NAME="api_load_test"
+BANK_CONTAINER_NAME="bank_simulator"
+IMAGE_NAME="payment-api:loadtest"
+
+# Validações
+if [ ! -f "$K6_DIR/script.js" ]; then
+    echo -e "${RED}ERRO: script.js não encontrado em $K6_DIR${NC}"
+    exit 1
+fi
+
+if [ ! -f "$PROJECT_ROOT/Dockerfile" ]; then
+    echo -e "${RED}ERRO: Dockerfile não encontrado na raiz: $PROJECT_ROOT/Dockerfile${NC}"
+    exit 1
+fi
 
 # ==============================================================================
-# Inicialização
+# 1. Preparar Ambiente
 # ==============================================================================
-echo -e "\n[1/4] Iniciando Bank Simulator..."
-pushd $PROJECT_ROOT > /dev/null
-docker-compose up -d
-popd > /dev/null
+echo -e "\n[1/5] Limpando ambiente anterior..."
+docker rm -f $API_CONTAINER_NAME 2>/dev/null || true
+docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down 2>/dev/null || true
+
+echo -e "\n[2/5] Buildando imagem da API..."
+
+docker build --network=host -t $IMAGE_NAME -f "$PROJECT_ROOT/Dockerfile" "$PROJECT_ROOT"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Falha no build da imagem Docker!${NC}"
+    exit 1
+fi
+
+# ==============================================================================
+# 2. Iniciar Infraestrutura
+# ==============================================================================
+echo -e "\n[3/5] Iniciando Dependências..."
+docker-compose -f "$PROJECT_ROOT/docker-compose.yml" up -d
 
 echo "Aguardando Bank Simulator..."
 for i in {1..30}; do
-    if curl -s $BANK_URL > /dev/null; then
+    if docker run --rm --network $NETWORK_NAME curlimages/curl -s "http://$BANK_CONTAINER_NAME:8080" > /dev/null; then
         echo -e "${GREEN}Bank Simulator online!${NC}"
         break
     fi
     sleep 1
 done
 
-echo -e "\n[2/4] Iniciando API (com logs em $API_LOG)..."
-pushd $PROJECT_ROOT > /dev/null
-# Agora salvamos o log para entender o erro
-go run main.go > "test/load/$API_LOG" 2>&1 &
-SERVER_PID=$!
-popd > /dev/null
+# ==============================================================================
+# 3. Iniciar API Containerizada
+# ==============================================================================
+echo -e "\n[4/5] Iniciando API no Container..."
 
-echo $SERVER_PID > $PID_FILE
+docker run -d \
+  --name $API_CONTAINER_NAME \
+  --network $NETWORK_NAME \
+  -e BANK_URL="http://$BANK_CONTAINER_NAME:8080" \
+  $IMAGE_NAME
 
 echo "Aguardando API..."
 API_READY=false
 for i in {1..30}; do
-    # Verifica se o processo ainda existe
-    if ! kill -0 $SERVER_PID 2>/dev/null; then
-        echo -e "${RED}API morreu antes de iniciar!${NC}"
+    if ! docker ps | grep -q $API_CONTAINER_NAME; then
+        echo -e "${RED}API Container morreu! Logs:${NC}"
+        docker logs $API_CONTAINER_NAME
         break
     fi
 
-    if curl -s "$API_URL/ping" > /dev/null; then
+    if docker run --rm --network $NETWORK_NAME curlimages/curl -s "http://$API_CONTAINER_NAME:8090/ping" > /dev/null; then
         echo -e "${GREEN}API online!${NC}"
         API_READY=true
         break
@@ -57,58 +88,40 @@ for i in {1..30}; do
 done
 
 if [ "$API_READY" = false ]; then
-    echo -e "${RED}API falhou. Mostrando últimos logs:${NC}"
-    cat "$API_LOG"
-    
-    if [ -f $PID_FILE ]; then rm $PID_FILE; fi
-    pushd $PROJECT_ROOT > /dev/null
-    docker-compose down
-    popd > /dev/null
+    echo -e "${RED}Falha ao iniciar API.${NC}"
+    docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down
     exit 1
 fi
 
 # ==============================================================================
-# Execução do K6 (Via Docker)
+# 4. Executar K6 (Sidecar Mode)
 # ==============================================================================
-echo -e "\n[3/4] Executando K6 Load Test (Docker)..."
+echo -e "\n[5/5] Executando K6 Load Test..."
 
-K6_DIR="$(pwd)/k6"
-
-# --network="host" só funciona bem no Linux nativo.
-# Se estiver no Mac/Windows, precisaria usar "host.docker.internal" no script do k6.
-# Assumindo Linux baseado no seu path (/home/luzucchi).
 docker run --rm -i \
-  --network="host" \
+  --network="container:$API_CONTAINER_NAME" \
   -v "$K6_DIR:/scripts" \
   grafana/k6 run /scripts/script.js
 
 EXIT_CODE=$?
 
 # ==============================================================================
-# Limpeza
+# 5. Limpeza Final
 # ==============================================================================
-echo -e "\n[4/4] Limpando ambiente..."
-
-# Verifica se a API ainda está rodando antes de matar
-if kill -0 $SERVER_PID 2>/dev/null; then
-    kill $SERVER_PID
-else
-    echo -e "${RED}AVISO: A API caiu durante o teste!${NC}"
-    echo -e "${RED}Logs da API (últimas 20 linhas):${NC}"
-    tail -n 20 "$API_LOG"
-    EXIT_CODE=1 # Força erro se a API caiu
+echo -e "\nLimpando tudo..."
+if [ $EXIT_CODE -ne 0 ]; then
+    echo -e "${RED}Logs da API:${NC}"
+    docker logs $API_CONTAINER_NAME | tail -n 20
 fi
 
-if [ -f $PID_FILE ]; then rm $PID_FILE; fi
-
-pushd $PROJECT_ROOT > /dev/null
-docker-compose down
-popd > /dev/null
+docker rm -f $API_CONTAINER_NAME > /dev/null
+docker-compose -f "$PROJECT_ROOT/docker-compose.yml" down > /dev/null
+docker rmi $IMAGE_NAME > /dev/null 2>/dev/null || true
 
 if [ $EXIT_CODE -eq 0 ]; then
-    echo -e "${GREEN}Teste de Carga Finalizado com Sucesso!${NC}"
+    echo -e "${GREEN}Teste de Carga Finalizado com SUCESSO!${NC}"
 else
-    echo -e "${RED}Teste de Carga Falhou!${NC}"
+    echo -e "${RED}Teste de Carga FALHOU!${NC}"
 fi
 
 exit $EXIT_CODE

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-01-08
+
+### Added
+- **Dockerfile:** Adding a dockerfile to simplify local tests, and spin it with the bank simulator in the docker-compose
+
+### Changed
+- **Core:** Implemented concurrency safety in `BankSimulator` using **Go Channels**. Transaction processing now follows a *worker pattern* to handle concurrent requests efficiently, preventing race conditions under load.
+
+### Fixed
+- **API:** Implemented **Graceful Shutdown** for the HTTP server to ensure port 8090 is properly released upon termination, fixing `bind: address already in use` errors.
+- **Tests:** Fix load test that was unable to find the api by building the api also as a container.
+
 ## [1.1.0] - 2026-01-08
 **Focus:** Quality Assurance & Testing Infrastructure.
 

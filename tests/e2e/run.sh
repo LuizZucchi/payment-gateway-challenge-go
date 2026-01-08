@@ -9,7 +9,6 @@ NC='\033[0m'
 
 API_URL="http://localhost:8090"
 BANK_URL="http://localhost:8080"
-PID_FILE="api.pid"
 PROJECT_ROOT="../../" 
 
 # ==============================================================================
@@ -21,14 +20,24 @@ if ! command -v jq &> /dev/null; then
 fi
 
 # ==============================================================================
-# Inicialização do Ambiente
+# Inicialização do Ambiente (Docker Compose)
 # ==============================================================================
-echo -e "\n[1/5] Iniciando Bank Simulator..."
+echo -e "\n[1/5] Iniciando Ambiente (API + Bank Simulator)..."
 pushd $PROJECT_ROOT > /dev/null
-docker-compose up -d
+
+docker-compose up -d --build
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Falha ao subir containers via docker-compose.${NC}"
+    popd > /dev/null
+    exit 1
+fi
 popd > /dev/null
 
-echo "Aguardando Bank Simulator..."
+# ==============================================================================
+# Healthcheck (Aguardando Serviços)
+# ==============================================================================
+echo "Aguardando Bank Simulator ($BANK_URL)..."
 for i in {1..30}; do
     if curl -s $BANK_URL > /dev/null; then
         echo -e "${GREEN}Bank Simulator online!${NC}"
@@ -37,15 +46,7 @@ for i in {1..30}; do
     sleep 1
 done
 
-echo -e "\n[2/5] Iniciando API Payment Gateway..."
-pushd $PROJECT_ROOT > /dev/null
-go run main.go > /dev/null 2>&1 &
-SERVER_PID=$!
-popd > /dev/null
-
-echo $SERVER_PID > $PID_FILE
-
-echo "Aguardando API..."
+echo "Aguardando API ($API_URL)..."
 API_READY=false
 for i in {1..30}; do
     if curl -s "$API_URL/ping" > /dev/null; then
@@ -57,9 +58,10 @@ for i in {1..30}; do
 done
 
 if [ "$API_READY" = false ]; then
-    echo -e "${RED}API falhou ao iniciar.${NC}"
-    if [ -f $PID_FILE ]; then kill $(cat $PID_FILE); rm $PID_FILE; fi
+    echo -e "${RED}API falhou ao iniciar ou não está respondendo.${NC}"
+    echo -e "${RED}Logs dos containers:${NC}"
     pushd $PROJECT_ROOT > /dev/null
+    docker-compose logs --tail=20
     docker-compose down
     popd > /dev/null
     exit 1
@@ -144,8 +146,6 @@ run_test "Banco Indisponível" \
 # Limpeza e Encerramento
 # ==============================================================================
 echo -e "\n[4/5] Limpando ambiente..."
-if [ -f $PID_FILE ]; then kill $(cat $PID_FILE); rm $PID_FILE; fi
-
 pushd $PROJECT_ROOT > /dev/null
 docker-compose down
 popd > /dev/null
