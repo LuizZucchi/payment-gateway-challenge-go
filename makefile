@@ -4,7 +4,7 @@ run:
 	go run main.go
 
 test:
-	go test -v -cover ./...
+	go test -v -race -cover ./...
 
 build:
 	go build -o bin/payment-gateway main.go
