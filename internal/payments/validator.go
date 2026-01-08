@@ -10,8 +10,7 @@ import (
 var allowedCurrencies = map[string]bool{
 	"USD": true,
 	"EUR": true,
-	"GBP": true,
-	"JPY": true,
+	"BRL": true,
 }
 
 var numericRegex = regexp.MustCompile(`^[0-9]+$`)
