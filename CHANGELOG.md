@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-01-08
+**Focus:** Quality Assurance & Testing Infrastructure.
+
+### Added
+- **End-to-End Testing (E2E):** Implemented a full system integration test script (`test/e2e/run.sh`) that orchestrates the Docker environment (Bank Simulator + API) to verify critical flows: Authorized, Declined, Validation Error, and Bank Service Unavailable.
+- **Load Testing:** Introduced performance testing infrastructure using k6 (`test/load/`), configured to run via Docker to ensure environment consistency.
+- **Automation:** Added new targets to the `makefile` (`make test-e2e` and `make test-load`) to simplify the execution of complex test suites.
+- **Documentation:** Updated `README.md` with comprehensive instructions on how to run the new integration and load tests.
+
+### Changed
+- **Test Coverage:** Completed the missing unit tests for `PostHandler` in `internal/payments/handler_test.go`, adding scenarios for JSON parsing errors, bank timeouts, and business rule validations.
+- **Fix Validator:** Remove one of the supported currencies, lefting only three as requested in the assignment description.
+
 ## [1.0.0] - 2026-01-07
 **Focus:** Core Payment Flow.
 

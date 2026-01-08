@@ -16,3 +16,70 @@ Feel free to change the structure of the solution, use a different test library 
 
 ### Swagger
 This template uses Swaggo to autodocument the API and create a Swagger spec. The Swagger UI is available at http://localhost:8090/swagger/index.html.
+
+## Running the Project
+
+### Prerequisites
+- Go 1.21+
+- Docker & Docker Compose
+- jq (required for E2E tests)
+
+### Application Commands
+
+#### Run API
+Starts the API server locally on port 8090.
+```bash
+make run
+
+```
+
+#### Build Binary
+
+Compiles the application to the `bin/` directory.
+
+```bash
+make build
+
+```
+
+### Testing Commands
+
+#### Unit Tests
+
+Runs standard Go unit tests with coverage.
+
+```bash
+make test
+
+```
+
+#### End-to-End (E2E) Tests
+
+Executes the integration test suite. This script automatically:
+
+1. Starts the Bank Simulator (Docker).
+2. Starts the Payment Gateway API.
+3. Runs a sequence of curl requests to validate success, decline, validation error, and bank error scenarios.
+4. Cleans up resources.
+
+```bash
+make test-e2e
+
+```
+
+#### Load Tests
+
+Executes a performance test using k6 via Docker. This script automatically:
+
+1. Starts the environment (API + Bank Simulator).
+2. Runs the load test script using the `grafana/k6` Docker image.
+3. Cleans up resources.
+
+```bash
+make test-load
+
+```
+
+```
+
+```

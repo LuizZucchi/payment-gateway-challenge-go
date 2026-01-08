@@ -29,12 +29,12 @@ func TestPostPaymentRequest_Validate(t *testing.T) {
 			wantErr: "",
 		},
 		{
-			name: "Valid Request (JPY)",
+			name: "Valid Request (BRL)",
 			req: payments.PostPaymentRequest{
 				CardNumber:  "1234567890123456",
 				ExpiryMonth: 12,
 				ExpiryYear:  futureYear,
-				Currency:    "JPY",
+				Currency:    "BRL",
 				Amount:      1000,
 				Cvv:         "123",
 			},
@@ -46,7 +46,7 @@ func TestPostPaymentRequest_Validate(t *testing.T) {
 				CardNumber:  "1234567890123456",
 				ExpiryMonth: 12,
 				ExpiryYear:  futureYear,
-				Currency:    "BRL",
+				Currency:    "JPY",
 				Amount:      100,
 				Cvv:         "123",
 			},
